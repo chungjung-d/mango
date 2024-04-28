@@ -1,7 +1,8 @@
 package com.mango.docker.model
 
 import zio.json._
-case class DockerContainer(id: String, name: Option[String])
+
+case class DockerContainer(id: String, status: String ,name: Option[String])
 
 object DockerContainer {
 

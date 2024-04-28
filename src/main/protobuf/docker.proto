@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.mango.grpc";
+option java_outer_classname = "DockerGprcProto";
+
+package controllers;
+
+
+service Docker {
+  rpc ListContainers (Empty) returns (ListContainersRes) {}
+  rpc ListImages (Empty) returns (ListImagesRes) {}
+  rpc CreateContainer (CreateContainerReq) returns (CreateContainerRes) {}
+}
+
+
+message Empty {}
+
+
+//SECTION: ListContainers
+message ListContainersRes {
+
+  message DockerContainer {
+    string id = 1;
+    string status = 2;
+    optional string name = 3;
+  }
+
+  repeated DockerContainer containers = 1;
+}
+
+//SECTION: ListImages
+message ListImagesRes {
+
+  message DockerImage {
+    string id = 1;
+    optional string name = 2;
+    repeated string tags = 3;
+  }
+
+  repeated DockerImage images = 1;
+}
+
+//SECTION: CreateContiner 
+message CreateContainerReq {
+  string image_id = 1;
+  string container_name = 2;
+}
+
+message CreateContainerRes {
+  string id = 1;
+  string status = 2;
+  optional string name = 3;
+}

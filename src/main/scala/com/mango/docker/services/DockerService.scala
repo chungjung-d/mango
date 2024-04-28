@@ -5,35 +5,55 @@ import zio.macros.accessible
 import scala.jdk.CollectionConverters._
 import com.github.dockerjava.api.DockerClient
 import com.mango.docker.model._
+import com.mango.docker.grpc
+import com.mango.docker.utils.DockerUtils
+import com.mango.grpc.ListImagesRes
 
 @accessible
 trait DockerService {
   def listContainers: Task[List[DockerContainer]]
   def listImages: Task[List[DockerImage]]
+
+  def createContainer(imageId: String, containerName: String): Task[DockerContainer]
+
 }
 
-case class DockerServiceImpl(client: DockerClient) extends DockerService {
-  def listContainers: Task[List[DockerContainer]] = ZIO.attemptBlocking {
-    client.listContainersCmd().exec().asScala.toList.map { containter =>
-      val name = containter.getNames().headOption
+case class DockerServiceImpl(client: DockerClient, utils: DockerUtils) extends DockerService {
+  def listContainers: Task[List[DockerContainer]] =
+    for {
+      containers <- ZIO.attemptBlocking(
+        client
+          .listContainersCmd()
+          .withShowAll(true)
+          .exec()
+          .asScala
+          .toList,
+      )
+      dockerContainers <- ZIO.foreach(containers)(utils.toDockerContainer)
+    } yield dockerContainers
 
-      DockerContainer(containter.getId, name)
-    }
+  def listImages: Task[List[DockerImage]] =
+    for {
+      images       <- ZIO.attemptBlocking(client.listImagesCmd().exec().asScala.toList)
+      dockerImages <- ZIO.foreach(images)(utils.toDockerImage)
+    } yield dockerImages
+
+  def createContainer(imageId: String, containerName: String): Task[DockerContainer] = {
+    val createContainerCmd = client.createContainerCmd(imageId).withName(containerName)
+    for {
+      containerId     <- ZIO.attemptBlocking(createContainerCmd.exec().getId)
+      container       <- ZIO.attemptBlocking(client.inspectContainerCmd(containerId).exec())
+      dockerContainer <- utils.toDockerContainer(container)
+    } yield dockerContainer
   }
 
-  def listImages: Task[List[DockerImage]] = ZIO.attemptBlocking {
-    client.listImagesCmd().exec().asScala.toList.map { image =>
-      val tags = image.getRepoTags.toList
-      val name = tags.headOption.flatMap(_.split(":").headOption)
-
-      DockerImage(image.getId, name, tags)
-    }
-  }
 }
 
 object DockerService {
-  val layer: ZLayer[DockerClient, Nothing, DockerService] =
-    ZLayer.fromFunction((client: DockerClient) => DockerServiceImpl(client))
+  val layer: ZLayer[DockerClient with DockerUtils, Nothing, DockerService] =
+    ZLayer.fromFunction((client: DockerClient, utils: DockerUtils) =>
+      DockerServiceImpl(client, utils),
+    )
 
   // val test: ZLayer[Any, Nothing, DockerService] = ZLayer.succeed(
   //     new DockerService {

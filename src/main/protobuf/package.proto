@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+
+package controllers;
+
+option (scalapb.options) = {
+
+    scope: PACKAGE
+    flat_package: true
+    no_default_values_in_constructor: true
+};
