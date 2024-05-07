@@ -15,17 +15,20 @@ trait DockerService {
   def listImages: Task[List[DockerImage]]
 
   def createContainer(imageId: String, containerName: String): Task[DockerContainer]
+  def startContainer(containerId: String): Task[DockerContainer]
+  def stopContainer(containerId: String): Task[DockerContainer]
+ 
 
 }
 
 case class DockerServiceImpl(client: DockerClient, utils: DockerUtils) extends DockerService {
+
   def listContainers: Task[List[DockerContainer]] =
     for {
       containers <- ZIO.attemptBlocking(
-        client
-          .listContainersCmd()
+        client.listContainersCmd
           .withShowAll(true)
-          .exec()
+          .exec
           .asScala
           .toList,
       )
@@ -46,6 +49,24 @@ case class DockerServiceImpl(client: DockerClient, utils: DockerUtils) extends D
       dockerContainer <- utils.toDockerContainer(container)
     } yield dockerContainer
   }
+
+  def startContainer(containerId: String): Task[DockerContainer] = {
+    val startContainerCmd = client.startContainerCmd(containerId)
+    for {
+      _               <- ZIO.attemptBlocking(startContainerCmd.exec())
+      container       <- ZIO.attemptBlocking(client.inspectContainerCmd(containerId).exec())
+      dockerContainer <- utils.toDockerContainer(container)
+    } yield dockerContainer
+  }
+
+  def stopContainer(containerId: String): Task[DockerContainer] =
+    for {
+      _               <- ZIO.attemptBlocking(client.stopContainerCmd(containerId).exec())
+      container       <- ZIO.attemptBlocking(client.inspectContainerCmd(containerId).exec())
+      dockerContainer <- utils.toDockerContainer(container)
+    } yield dockerContainer
+    
+
 
 }
 

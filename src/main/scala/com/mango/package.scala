@@ -8,8 +8,10 @@ import com.mango.docker.services.DockerService
 import com.mango.grpc.ZioDocker
 import zio._
 import io.grpc.protobuf.services.ProtoReflectionService
+import com.mango.docker.services.DockerLifetimeService
 
 package object mango {
+
   object Dependecies {
 
     val serviceList = ServiceList.addFromEnvironment[ZioDocker.RCDocker]
@@ -22,7 +24,7 @@ package object mango {
         serviceList,
       )
 
-    val mangoApp: ZLayer[Any, Throwable, Server] =
+    val mangoGrpcApp: ZLayer[Any, Throwable, Server] =
       ZLayer.make[Server](
         serverLayer,
         docker.Dependecies.dockerClient,
@@ -30,6 +32,9 @@ package object mango {
         docker.grpc.DockerGrpcService.layer,
         docker.utils.DockerUtils.layer,
       )
+
+    val dockerLifeCycleSchedulerLayer =
+      (docker.Dependecies.dockerService ++ docker.Dependecies.dockerLifetimeService)
 
   }
 

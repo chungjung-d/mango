@@ -8,18 +8,23 @@ import scalapb.zio_grpc.RequestContext
 
 case class DockerGrpcService(dockerService: DockerService) extends ZioDocker.RCDocker {
 
-  def listContainers(request: Empty, context: RequestContext): IO[io.grpc.StatusException, ListContainersRes] =
+  def listContainers(
+      request: Empty,
+      context: RequestContext,
+  ): IO[io.grpc.StatusException, ListContainersRes] =
     for {
       containers <- dockerService.listContainers.mapError(_ =>
         new io.grpc.StatusException(io.grpc.Status.INTERNAL),
       )
       containerRes = containers.map { container =>
-        ListContainersRes.DockerContainer(container.id, container.status ,container.name)
+        ListContainersRes.DockerContainer(container.id, container.status, container.name)
       }
     } yield ListContainersRes(containerRes)
 
-
-    def listImages(request: Empty, context: RequestContext): IO[io.grpc.StatusException, ListImagesRes] =
+  def listImages(
+      request: Empty,
+      context: RequestContext,
+  ): IO[io.grpc.StatusException, ListImagesRes] =
     for {
       images <- dockerService.listImages.mapError(_ =>
         new io.grpc.StatusException(io.grpc.Status.INTERNAL),
@@ -29,12 +34,35 @@ case class DockerGrpcService(dockerService: DockerService) extends ZioDocker.RCD
       }
     } yield ListImagesRes(imageRes)
 
-    def createContainer(request: CreateContainerReq, context: RequestContext): IO[io.grpc.StatusException, CreateContainerRes] =
+  def createContainer(
+      request: CreateContainerReq,
+      context: RequestContext,
+  ): IO[io.grpc.StatusException, CreateContainerRes] =
     for {
-      container <- dockerService.createContainer(request.imageId, request.containerName).mapError(_ =>
-        new io.grpc.StatusException(io.grpc.Status.INTERNAL),
-      )
-    } yield CreateContainerRes(container.id, container.status ,container.name)
+      container <- dockerService
+        .createContainer(request.imageId, request.containerName)
+        .mapError(_ => new io.grpc.StatusException(io.grpc.Status.INTERNAL))
+    } yield CreateContainerRes(container.id, container.status, container.name)
+
+  def startContainer(
+      request: StartContainerReq,
+      context: RequestContext,
+  ): IO[io.grpc.StatusException, StartContainerRes] =
+    for {
+      container <- dockerService
+        .startContainer(request.containerId)
+        .mapError(_ => new io.grpc.StatusException(io.grpc.Status.INTERNAL))
+    } yield StartContainerRes(container.id, container.status, container.name)
+
+    def stopContainer(
+      request: StopContainerReq,
+      context: RequestContext,
+    ): IO[io.grpc.StatusException, StopContainerRes] =
+      for {
+        container <- dockerService
+          .stopContainer(request.containerId)
+          .mapError(_ => new io.grpc.StatusException(io.grpc.Status.INTERNAL))
+      } yield StopContainerRes(container.id, container.status, container.name)
 
 }
 

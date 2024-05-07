@@ -11,6 +11,8 @@ service Docker {
   rpc ListContainers (Empty) returns (ListContainersRes) {}
   rpc ListImages (Empty) returns (ListImagesRes) {}
   rpc CreateContainer (CreateContainerReq) returns (CreateContainerRes) {}
+  rpc StartContainer (StartContainerReq) returns (StartContainerRes) {}
+  rpc StopContainer (StopContainerReq) returns (StopContainerRes) {}
 }
 
 
@@ -52,3 +54,27 @@ message CreateContainerRes {
   string status = 2;
   optional string name = 3;
 }
+
+//SECTION: StartContainer
+message StartContainerReq {
+  string container_id = 1;
+}
+
+message StartContainerRes {
+  string id = 1;
+  string status = 2;
+  optional string name = 3;
+}
+
+
+//SECTION: StopContainer
+message StopContainerReq {
+  string container_id = 1;
+}
+
+message StopContainerRes {
+  string id = 1;
+  string status = 2;
+  optional string name = 3;
+}
+
