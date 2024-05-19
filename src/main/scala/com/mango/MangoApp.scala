@@ -11,14 +11,7 @@ import com.mango.docker.services.DockerService
 
 object Mangoapp extends ZIOAppDefault {
 
-  val dockerLifeCycleScheduler: Task[Long] =
-    DockerLifetimeService
-      .getContainersToKill()
-      .flatMap(ZIO.foreachDiscard(_)(DockerService.stopContainer(_).ignore))
-      .repeat(Schedule.spaced(5.seconds))
-      .provideLayer(Dependecies.dockerLifeCycleSchedulerLayer)
-
   def run =
-    (Dependecies.mangoGrpcApp.launch &> dockerLifeCycleScheduler).exitCode
+    (Zio.mangoGrpcZio &> Zio.dockerLifeCycleSchedulerZio).exitCode
 
 }

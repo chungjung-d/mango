@@ -14,6 +14,7 @@ trait DockerLifetimeService {
   def getContainersToKill(): UIO[List[String]]
 }
 
+
 case class DockerLifetimeServiceImpl(
     lifespanByContainerId: Ref[Map[String, Duration]],
     aliveTimeByContainerId: Ref[Map[String, OffsetDateTime]],

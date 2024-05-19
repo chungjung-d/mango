@@ -16,7 +16,7 @@ package object mango {
 
     val serviceList = ServiceList.addFromEnvironment[ZioDocker.RCDocker]
 
-    val serverLayer =
+    val mangoGrpcServerLayer =
       ServerLayer.fromServiceList(
         io.grpc.ServerBuilder
           .forPort(9090)
@@ -24,17 +24,34 @@ package object mango {
         serviceList,
       )
 
-    val mangoGrpcApp: ZLayer[Any, Throwable, Server] =
-      ZLayer.make[Server](
-        serverLayer,
-        docker.Dependecies.dockerClient,
-        docker.services.DockerService.layer,
-        docker.grpc.DockerGrpcService.layer,
-        docker.utils.DockerUtils.layer,
-      )
+    val dockerLifeCycleSchedulerLayer = ZLayer.make[DockerService with DockerLifetimeService](
+      docker.Dependecies.dockerClient,
+      docker.services.DockerService.layer,
+      docker.utils.DockerUtils.layer,
+      docker.services.DockerLifetimeService.layer,
+    )
 
-    val dockerLifeCycleSchedulerLayer =
-      (docker.Dependecies.dockerService ++ docker.Dependecies.dockerLifetimeService)
+  }
+
+  object Zio {
+
+    val mangoGrpcZio =
+      ZLayer
+        .make[Server](
+          Dependecies.mangoGrpcServerLayer,
+          docker.Dependecies.dockerClient,
+          docker.services.DockerService.layer,
+          docker.grpc.DockerGrpcService.layer,
+          docker.utils.DockerUtils.layer,
+        )
+        .launch
+
+    val dockerLifeCycleSchedulerZio: Task[Long] =
+      DockerLifetimeService
+        .getContainersToKill()
+        .flatMap(ZIO.foreachDiscard(_)(DockerService.stopContainer(_).ignore))
+        .repeat(Schedule.spaced(5.seconds))
+        .provideLayer(Dependecies.dockerLifeCycleSchedulerLayer)
 
   }
 
